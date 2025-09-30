@@ -1,0 +1,17 @@
+<html>
+    <head></head>
+    <body>
+        <a href="/index.html">Recursive test</a>
+        <a href="//test.html">Recursive test</a>
+        <a href="/test.html">Good test</a>
+        <a href="../">Relative link</a>
+        <a href="#">Null anchor</a>
+        <a href="#test">Non-null anchors</a>
+        <a href="https://google.com/">Different origin, must be ignored</a>
+        <img src="enfants.jpg" />
+        <picture>
+            <source srcset="img/montagne.jpeg 200w, img/montagne.jpeg 400w" media="(min-width: 800px)">
+            <img src="img/montagne?abcdef" alt="Montagne">
+        </picture>
+    </body>
+</html>
