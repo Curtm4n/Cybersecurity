@@ -105,18 +105,21 @@ def crawler(response, url, path, level, downloaded_images, visited_sites):
     print(f"We enter crawler fonction, we are level {level} on url {url}")
     if level == 0:
         return
+    if url in visited_sites and visited_sites[url] >= level:
+        print(f"We already visited site {url} with a level of {visited_sites[url]}")
+        return
     if not url in visited_sites:
         get_imgs(response, url, path, downloaded_images)
-        visited_sites.add(url)
+        visited_sites[url] = level
         print("These are the sites already visited : ")
         for site in visited_sites:
             print(site)
+    visited_sites[url] = level
 
     domain_name = get_domain_name(url)
     soup = BeautifulSoup(response.text, "html.parser")
     links = soup.find_all("a")
     for link in links:
-        print(link)
         href = link.get("href")
         if href:
             next_url = urljoin(url, href)
@@ -135,7 +138,7 @@ def crawler(response, url, path, level, downloaded_images, visited_sites):
 
 def main():
     downloaded_images = set()
-    visited_sites = set()
+    visited_sites = {}
     args = get_args()
     response = check_url(args.URL)
     if response is None:
