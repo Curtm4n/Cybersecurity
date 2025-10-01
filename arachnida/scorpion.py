@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-import argparse, os
+import argparse, os, datetime
 from PIL import Image
 from PIL.ExifTags import TAGS
 
@@ -24,10 +24,24 @@ def check_valid_files(args):
 def display_metadata(files):
     for image in files:
         print(f"--- Metadata of image {image}---")
-        img = Image.open(image)
-        print(f"Image format : {img.format}")
-        print(f"Image size : {img.size}")
-        print(f"Image mode : {img.mode}")
+        try:
+            img = Image.open(image)
+            creation_time = datetime.datetime.fromtimestamp(os.path.getctime(image))
+            creation_time = creation_time.strftime("%d-%m-%Y %H:%M:%S")
+            print(f"File creation date on system : {creation_time}")
+            print(f"Image format : {img.format}")
+            print(f"Image size : {img.size}")
+            print(f"Image mode : {img.mode}")
+
+            exif_data = img._getexif()
+            if exif_data:
+                for tag_id, value in exif_data.items():
+                    tag = TAGS.get(tag_id, tag_id)
+                    print(f"{tag:25}: {value}")
+            else:
+                print("❌ No EXIF data found")
+        except Exception as e:
+            print(f"Error while reading image {image}")
         print("\n")
 
 def main():
