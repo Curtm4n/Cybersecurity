@@ -16,6 +16,7 @@ def get_args():
     if args.recursive:
         if args.level is None:
             args.level = 5
+    args.path = os.path.abspath(os.path.expanduser(args.path))
     
     #VERBOSE PART FOR THE ARGUMENTS, CAN BE COMMENTED
     """    print("The download will be recursive")
@@ -30,7 +31,6 @@ def check_url(url):
     try:
         response = requests.get(url, headers=headers, timeout=10)
         if response.status_code == 200:
-            #print("Valid URL !")
             return response
         else:
             print(f"Error status: {response.status_code}")
@@ -52,16 +52,20 @@ def check_path(path):
         if not os.path.isdir(path):
             print(f"{path} already exist as a file cannot create a folder of the same name")
             return False
-        #print(f"{path} folder already exist")
     return True
 
-"""def valid_img_url(url):
-    url_with_http_scheme = urlparse(url)._replace(scheme='http').geturl()
-    print(url_with_http_scheme)
-    return url_with_http_scheme.startswith('http')"""
-
 def download_img(url, path):
-    print(f"downloading img at url: {url}, into {path}")
+    #print(f"downloading img at url: {url}, into {path}")
+    try:
+        response = requests.get(url, timeout=10)
+        if response.status_code == 200:
+            with open(path, "wb") as f:
+                f.write(response.content)
+            print(f"✅ successfully downloaded image {url}")
+        else:
+            print(f"❌ Error downloading image {url}")
+    except requests.exceptions.RequestException as e:
+        print(f"❌ Error while getting image {url}")
 
 def get_imgs(response, url, path, downloaded_images):
     valid_ext = (".jpg", ".jpeg", ".png", ".gif", ".bmp")
@@ -78,11 +82,9 @@ def get_imgs(response, url, path, downloaded_images):
         else:
             img_url = img.get("src")
         
-        #if (img_url and valid_img_url(img_url)):
         if (img_url):
             img_url = urljoin(url, img_url)
             img_name = os.path.basename(urlparse(img_url).path)
-            print(img_name)
             if not img_name.lower().endswith(valid_ext):
                 continue
             img_path = os.path.join(path, img_name)
@@ -90,20 +92,59 @@ def get_imgs(response, url, path, downloaded_images):
                 download_img(img_url, img_path)
                 downloaded_images.add(img_url)
 
+def get_domain_name(url):
+    domain_base = tldextract.extract(url).domain
+    parsed_url = urlparse(url)
+    port = parsed_url.port
+    if port:
+        domain_base = f"{domain_base}:{port}"
+    #print(f"The base of the domain is: {domain_base}")
+    return domain_base
+
+def crawler(response, url, path, level, downloaded_images, visited_sites):
+    print(f"We enter crawler fonction, we are level {level} on url {url}")
+    if level == 0 or url in visited_sites:
+        return
+    visited_sites.add(url)
+    print("These are the sites visited already: ")
+    for site in visited_sites:
+        print(site)
+    get_imgs(response, url, path, downloaded_images)
+
+    domain_name = get_domain_name(url)
+    soup = BeautifulSoup(response.text, "html.parser")
+    links = soup.find_all("a")
+    for link in links:
+        print(link)
+        href = link.get("href")
+        if href:
+            next_url = urljoin(url, href)
+            if next_url == url or next_url.startswith(url + "#"):
+                print(f"URL {next_url} is either the same we curently on or is an anchor we skip")
+                continue
+            link_domain = get_domain_name(next_url)
+            if link_domain == domain_name:
+                print(f"We're going on link {next_url}")
+                response = check_url(next_url)
+                if response is None:
+                    continue
+                crawler(response, next_url, path, level - 1, downloaded_images, visited_sites)
+            else:
+                print(f"We ignore link {next_url}")
 
 def main():
     downloaded_images = set()
+    visited_sites = set()
     args = get_args()
     response = check_url(args.URL)
     if response is None:
-        return
-    domain_base = tldextract.extract(args.URL).domain
-    #print(f"The base of the domain is: {domain_base}")
-    args.path = os.path.abspath(os.path.expanduser(args.path))
+        exit(1)
     if not check_path(args.path):
-        print("error with the path")
-        return
-    get_imgs(response, args.URL, args.path, downloaded_images)
+        exit(1)
+    if args.recursive:
+        crawler(response, args.URL, args.path, args.level, downloaded_images, visited_sites)
+    else:
+        get_imgs(response, args.URL, args.path, downloaded_images)
 
 if __name__ == "__main__":
     main()
