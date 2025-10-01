@@ -103,13 +103,14 @@ def get_domain_name(url):
 
 def crawler(response, url, path, level, downloaded_images, visited_sites):
     print(f"We enter crawler fonction, we are level {level} on url {url}")
-    if level == 0 or url in visited_sites:
+    if level == 0:
         return
-    visited_sites.add(url)
-    print("These are the sites visited already: ")
-    for site in visited_sites:
-        print(site)
-    get_imgs(response, url, path, downloaded_images)
+    if not url in visited_sites:
+        get_imgs(response, url, path, downloaded_images)
+        visited_sites.add(url)
+        print("These are the sites already visited : ")
+        for site in visited_sites:
+            print(site)
 
     domain_name = get_domain_name(url)
     soup = BeautifulSoup(response.text, "html.parser")
